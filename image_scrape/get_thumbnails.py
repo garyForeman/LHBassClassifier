@@ -10,6 +10,7 @@ Guitars forum at talkbass.com
 from __future__ import print_function
 import csv, os, urllib
 import numpy as np
+from PIL import Image, ImageOps
 from pyquery import PyQuery as pq
 
 DATA_PATH = os.path.join('..', 'data')
@@ -50,21 +51,44 @@ def get_thumb_urls(d):
 
     return thumbnail_url_list
 
+def filename_from_url(thumbnail_url):
+    """
+    thumbnail_url : a string with a url to a bass image
+    strips filename from the end of thumbnail_url and prepends DATA_PATH 
+    """
+
+    return os.path.join(DATA_PATH, thumbnail_url.split('/')[-1])
+
 def download_thumb(thumbnail_url):
     """
     thumbnail_url : a string with a url to a bass image
     Pulls dowm image from thumbnail_url and stores in DATA_DIR
     """
 
-    print(thumbnail_url)
-
-    filename = thumbnail_url.split('/')[-1]
+    filename = filename_from_url(thumbnail_url)
 
     try:
-        urllib.urlretrieve(thumbnail_url, os.path.join(DATA_PATH, filename))
+        urllib.urlretrieve(thumbnail_url, filename)
     except IOError:
         #URL is not an image file
         pass
+
+def crop_image(filename):
+    """
+    filename: a string with the name to a locally stored image file
+    Crops image at filename to 128 x 128 pixels and overwrites original
+    """
+
+    try:
+        img = Image.open(filename)
+        img = ImageOps.fit(img, (128, 128), Image.ANTIALIAS)
+        img.save(filename)
+    except NameError:
+        #File does not exist
+        pass
+    except IOError:
+        #Image is corrupted
+        os.remove(filename)
 
 def main():
     make_data_dir()
@@ -80,6 +104,8 @@ def main():
         thumbnail_url_list.extend(get_thumb_urls(d))
 
         map(download_thumb, thumbnail_url_list)
+        filename_list = map(filename_from_url, thumbnail_url_list)
+        map(crop_image, filename_list)
 
         print("page", i, "finished")
 
