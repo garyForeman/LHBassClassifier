@@ -87,3 +87,8 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+#Repo specific files to ignore
+*.jpg
+get_image_filenames.py
+*/.DS_Store
