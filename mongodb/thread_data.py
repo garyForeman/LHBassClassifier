@@ -6,7 +6,7 @@ Created: September 18, 2016
 This script scrapes image urls, thread titles, user names, and thread
 ids from thread links in the For Sale: Bass Guitars forum at
 talkbass.com. Information from each thread is saved as a document in a 
-MongoDB data base.
+MongoDB database.
 """
 
 from __future__ import print_function
@@ -16,7 +16,6 @@ from pymongo import MongoClient
 from pyquery import PyQuery as pq
 
 INDEX_TALKBASS = 'http://www.talkbass.com/'
-IMAGES_TALKBASS = 'http://images'
 CLASSIFIEDS = "forums/for-sale-bass-guitars.126/"
 NUM_PAGES = 1
 
@@ -34,7 +33,7 @@ def get_page_url(i):
 def get_threads(d):
     """
     d : a PyQuery object containing web page html
-    returns: list of thread lis with id beginning with "thread-" class not
+    returns: list of thread lis with id beginning with "thread-" and class not
              containing the string 'sticky'
     """
 
@@ -45,23 +44,33 @@ def extract_thread_data(thread_list):
     thread_list: list of lxml.html.HtmlElement containing each for sale thread
                  link
     extracts thread data we want to keep: user name, thread title, thread id,
-    and thumbnail image url
+    and thumbnail image url, and returns a list of documents to be inserted
+    into a MongoDB database
     """
+
+    document_list = []
 
     for thread in thread_list:
         #parse thread using PyQuery
         d = pq(thread)
-        print("Thread id:", d('li').attr['id'][len("thread-"):])
-        print("User name:", d('li').attr['data-author'])
-        print("Thread title:", d('.PreviewTooltip').text())
-        print("Image url:", d('.thumb.Av1s.Thumbnail').attr['data-thumbnailurl'])
+
+        thread_id = d('li').attr['id'][len('thread-'):]
+        username = d('li').attr['data-author']
+        thread_title = d('.PreviewTooltip').text()
+        image_url = d('.thumb.Av1s.Thumbnail').attr['data-thumbnailurl']
+        document_list.append({'_id': thread_id,
+                              'username': username,
+                              'thread_title': thread_title,
+                              'image_url': image_url})
+
+    return document_list
 
 if __name__ == '__main__':
     #Establish connection to MongoDB open on port 27017
-    #client = MongoClient()
+    client = MongoClient()
 
-    #Access threads data base
-    #db = client.threads
+    #Access threads database
+    db = client.threads
 
 
     for i in xrange(1, NUM_PAGES+1):
@@ -71,14 +80,6 @@ if __name__ == '__main__':
         d = pq(tb_classified_page)
 
         thread_list = get_threads(d)
-        extract_thread_data(thread_list)
-
-
-
-
-
-
-
-
-
-
+        document_list = extract_thread_data(thread_list)
+        for document in document_list:
+            print(document)
