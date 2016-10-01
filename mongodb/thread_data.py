@@ -12,7 +12,7 @@ MongoDB database.
 from __future__ import print_function
 import csv, os, urllib
 import numpy as np
-from pymongo import MongoClient
+import pymongo
 from pyquery import PyQuery as pq
 
 INDEX_TALKBASS = 'http://www.talkbass.com/'
@@ -72,10 +72,10 @@ def extract_thread_data(thread_list):
 
 if __name__ == '__main__':
     #Establish connection to MongoDB open on port 27017
-    client = MongoClient()
+    client = pymongo.MongoClient()
 
     #Access threads database
-    db = client.threads
+    db = client.for_sale_bass_guitars
 
     for i in xrange(1, NUM_PAGES+1):
         tb_classified_page = get_page_url(i)
@@ -85,5 +85,11 @@ if __name__ == '__main__':
 
         thread_list = get_threads(d)
         document_list = extract_thread_data(thread_list)
-        for document in document_list:
-            print(document)
+        try:
+            result = db.threads.insert_many(document_list, ordered=False)
+        except pymongo.errors.BulkWriteError:
+            # Will throw error if _id has already been used. Just want
+            # to skip these threads since data has already been written.
+            pass
+
+    client.close()
