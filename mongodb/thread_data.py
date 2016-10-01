@@ -58,10 +58,15 @@ def extract_thread_data(thread_list):
         username = d('li').attr['data-author']
         thread_title = d('.PreviewTooltip').text()
         image_url = d('.thumb.Av1s.Thumbnail').attr['data-thumbnailurl']
-        document_list.append({'_id': thread_id,
-                              'username': username,
+        post_date = d('span.DateTime').text()
+        #if thread has been posted within the last week, date is contained
+        #elsewhere
+        if post_date == '':
+            post_date = d('abbr.DateTime').attr['data-datestring']
+
+        document_list.append({'_id': thread_id, 'username': username,
                               'thread_title': thread_title,
-                              'image_url': image_url})
+                              'image_url': image_url, 'post_date': post_date})
 
     return document_list
 
@@ -71,7 +76,6 @@ if __name__ == '__main__':
 
     #Access threads database
     db = client.threads
-
 
     for i in xrange(1, NUM_PAGES+1):
         tb_classified_page = get_page_url(i)
