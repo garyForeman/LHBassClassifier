@@ -8,17 +8,12 @@ Guitars forum at talkbass.com
 """
 
 from __future__ import print_function
-import csv, os, urllib
-import numpy as np
+from glob import glob
+import os, urllib
 from PIL import Image, ImageOps
-from pyquery import PyQuery as pq
+import pymongo
 
-DATA_PATH = os.path.join('..', 'data')
-
-INDEX_TALKBASS = 'http://www.talkbass.com/'
-IMAGES_TALKBASS = 'http://images'
-CLASSIFIEDS = "forums/for-sale-bass-guitars.126/"
-NUM_PAGES = 1
+DATA_PATH = os.path.join('..', 'data', 'images')
 
 def make_data_dir():
     """
@@ -28,36 +23,16 @@ def make_data_dir():
     if not os.path.isdir(DATA_PATH):
         os.makedirs(DATA_PATH)
 
-def get_page_url(i):
-    """
-    i : integer page number of classified section
-    returns : full url path to desired page number
-    """
-
-    tb_classified_page = INDEX_TALKBASS + CLASSIFIEDS
-    if i > 1: tb_classified_page += 'page-' + str(i)
-
-    return tb_classified_page
-
-def get_thumb_urls(d):
-    """
-    d : a PyQuery object containing web page html
-    returns: list of thumbnail urls
-    """
-
-    thumbnail_url_list = []
-    for threadlink in d('.thumb.Av1s.Thumbnail').items():
-        thumbnail_url_list.append(threadlink.attr['data-thumbnailurl'])
-
-    return thumbnail_url_list
-
 def filename_from_url(thumbnail_url):
     """
     thumbnail_url : a string with a url to a bass image
-    strips filename from the end of thumbnail_url and prepends DATA_PATH 
+    Strips filename from the end of thumbnail_url and prepends DATA_PATH.
+    Also ensures the file extension is jpg
     """
 
-    return os.path.join(DATA_PATH, thumbnail_url.split('/')[-1])
+    filename = thumbnail_url.strip('/').split('/')[-1]
+    basename, ext = os.path.splitext(filename)
+    return os.path.join(DATA_PATH, basename + '.jpg')
 
 def download_thumb(thumbnail_url):
     """
@@ -92,22 +67,35 @@ def crop_image(filename):
 
 def main():
     make_data_dir()
-    
-    for i in xrange(1, NUM_PAGES+1):
-        thumbnail_url_list = []
 
-        tb_classified_page = get_page_url(i)
+    #Establish connection to MongoDB open on port 27017
+    client = pymongo.MongoClient()
 
-        #initialize PyQuery
-        d = pq(tb_classified_page)
+    #Access threads database
+    db = client.for_sale_bass_guitars
 
-        thumbnail_url_list.extend(get_thumb_urls(d))
+    #Get database documents
+    cursor = db.threads.find()
 
-        map(download_thumb, thumbnail_url_list)
-        filename_list = map(filename_from_url, thumbnail_url_list)
-        map(crop_image, filename_list)
+    #Get list of images that have already been scraped
+    scraped_image_list = glob(os.path.join(DATA_PATH, '*.jpg'))
 
-        print("page", i, "finished")
+    thumbnail_url_list = []
+    for document in cursor:
+        thumbnail_url = document[u'image_url']
+        try:
+            filename = filename_from_url(thumbnail_url)
+            if filename not in scraped_image_list:
+                thumbnail_url_list.append(thumbnail_url)
+        except AttributeError:
+            #thread has no associated thumbnail
+            pass
+
+    map(download_thumb, thumbnail_url_list)
+    filename_list = map(filename_from_url, thumbnail_url_list)
+    map(crop_image, filename_list)
+
+    client.close()
 
 if __name__ == "__main__":
     main()
