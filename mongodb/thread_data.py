@@ -70,7 +70,7 @@ def extract_thread_data(thread_list):
 
     return document_list
 
-if __name__ == '__main__':
+def main():
     #Establish connection to MongoDB open on port 27017
     client = pymongo.MongoClient()
 
@@ -93,3 +93,6 @@ if __name__ == '__main__':
             pass
 
     client.close()
+
+if __name__ == '__main__':
+    main()
