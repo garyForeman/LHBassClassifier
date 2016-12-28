@@ -5,12 +5,12 @@ Author: Gary Foreman
 Created: September 18, 2016
 This script scrapes image urls, thread titles, user names, and thread
 ids from thread links in the For Sale: Bass Guitars forum at
-talkbass.com. Information from each thread is saved as a document in a 
+talkbass.com. Information from each thread is saved as a document in a
 MongoDB database.
 """
 
 from __future__ import print_function
-import csv, os, urllib
+import time
 import numpy as np
 import pymongo
 from pyquery import PyQuery as pq
@@ -70,6 +70,14 @@ def extract_thread_data(thread_list):
 
     return document_list
 
+def pause_scrape():
+    """
+    Sleeps for a random amount of time between 5 and 15 seconds.
+    """
+
+    seconds = 5. + np.random.random() * 10.
+    time.sleep(seconds)
+
 def main():
     #Establish connection to MongoDB open on port 27017
     client = pymongo.MongoClient()
@@ -91,6 +99,8 @@ def main():
             # Will throw error if _id has already been used. Just want
             # to skip these threads since data has already been written.
             pass
+
+        pause_scrape()
 
     client.close()
 
