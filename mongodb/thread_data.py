@@ -17,7 +17,7 @@ from pyquery import PyQuery as pq
 
 INDEX_TALKBASS = 'http://www.talkbass.com/'
 CLASSIFIEDS = "forums/for-sale-bass-guitars.126/"
-NUM_PAGES = 1
+NUM_PAGES = 400
 
 def get_page_url(i):
     """
@@ -78,6 +78,18 @@ def pause_scrape():
     seconds = 5. + np.random.random() * 10.
     time.sleep(seconds)
 
+def report_progress(current_page, report_page_factor=10):
+    """
+    current_page: integer, last page number of thread data scraped
+    report_page_factor: integer, how often to print progress
+    prints scraping progress if current_page is a factor if report_page_factor
+    """
+
+    is_reportable = current_page % report_page_factor == 0
+    if is_reportable:
+        report = 'Finished scraping page {0}'.format(current_page)
+        print(report)
+
 def main():
     #Establish connection to MongoDB open on port 27017
     client = pymongo.MongoClient()
@@ -101,6 +113,7 @@ def main():
             pass
 
         pause_scrape()
+        report_progress(i)
 
     client.close()
 
