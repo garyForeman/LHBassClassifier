@@ -10,14 +10,21 @@ MongoDB database.
 """
 
 from __future__ import print_function
+import sys
 import time
 import numpy as np
 import pymongo
 from pyquery import PyQuery as pq
 
+sys.path.append('..')
+from utilities.utilities import pause_scrape, report_progress
+
+NUM_PAGES = 1
+MIN_PAUSE_SECONDS = 5.
+MAX_PAUSE_SECONDS = 15.
+REPORT_MESSAGE = 'Finished scraping page'
 INDEX_TALKBASS = 'http://www.talkbass.com/'
 CLASSIFIEDS = "forums/for-sale-bass-guitars.126/"
-NUM_PAGES = 400
 
 def get_page_url(i):
     """
@@ -70,26 +77,6 @@ def extract_thread_data(thread_list):
 
     return document_list
 
-def pause_scrape():
-    """
-    Sleeps for a random amount of time between 5 and 15 seconds.
-    """
-
-    seconds = 5. + np.random.random() * 10.
-    time.sleep(seconds)
-
-def report_progress(current_page, report_page_factor=10):
-    """
-    current_page: integer, last page number of thread data scraped
-    report_page_factor: integer, how often to print progress
-    prints scraping progress if current_page is a factor if report_page_factor
-    """
-
-    is_reportable = current_page % report_page_factor == 0
-    if is_reportable:
-        report = 'Finished scraping page {0}'.format(current_page)
-        print(report)
-
 def main():
     #Establish connection to MongoDB open on port 27017
     client = pymongo.MongoClient()
@@ -112,8 +99,8 @@ def main():
             # to skip these threads since data has already been written.
             pass
 
-        pause_scrape()
-        report_progress(i)
+        pause_scrape(MIN_PAUSE_SECONDS, MAX_PAUSE_SECONDS)
+        report_progress(i, REPORT_MESSAGE)
 
     client.close()
 
