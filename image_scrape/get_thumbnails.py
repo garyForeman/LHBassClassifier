@@ -9,10 +9,19 @@ Guitars forum at talkbass.com
 
 from __future__ import print_function
 from glob import glob
-import os, urllib
+import os
+import sys
+import urllib
 from PIL import Image, ImageOps
 import pymongo
 
+sys.path.append('..')
+from utilities.utilities import pause_scrape, report_progress
+
+MIN_PAUSE_SECONDS = 0.15
+MAX_PAUSE_SECONDS = 0.5
+REPORT_MESSAGE = 'Scraped image'
+REPORT_FREQUENCY = 300
 DATA_PATH = os.path.join('..', 'data', 'images')
 
 def make_data_dir():
@@ -47,6 +56,9 @@ def download_thumb(thumbnail_url):
     except IOError:
         #URL is not an image file
         pass
+    except UnicodeError:
+        #URL contains non-ASCII characters
+        pass
 
 def crop_image(filename):
     """
@@ -63,7 +75,11 @@ def crop_image(filename):
         pass
     except IOError:
         #Image is corrupted
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except OSError:
+            #Filename is too long
+            pass
 
 def main():
     make_data_dir()
@@ -91,11 +107,17 @@ def main():
             #thread has no associated thumbnail
             pass
 
-    map(download_thumb, thumbnail_url_list)
-    filename_list = map(filename_from_url, thumbnail_url_list)
-    map(crop_image, filename_list)
-
     client.close()
+
+    thumbnail_count = 1
+    for thumbnail_url in thumbnail_url_list:
+        download_thumb(thumbnail_url)
+        filename = filename_from_url(thumbnail_url)
+        crop_image(filename)
+
+        pause_scrape(MIN_PAUSE_SECONDS, MAX_PAUSE_SECONDS)
+        report_progress(thumbnail_count, REPORT_MESSAGE, REPORT_FREQUENCY)
+        thumbnail_count += 1
 
 if __name__ == "__main__":
     main()
