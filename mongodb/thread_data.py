@@ -11,8 +11,6 @@ MongoDB database.
 
 from __future__ import print_function
 import sys
-import time
-import numpy as np
 import pymongo
 from pyquery import PyQuery as pq
 
@@ -33,7 +31,8 @@ def get_page_url(i):
     """
 
     tb_classified_page = INDEX_TALKBASS + CLASSIFIEDS
-    if i > 1: tb_classified_page += 'page-' + str(i)
+    if i > 1:
+        tb_classified_page += 'page-' + str(i)
 
     return tb_classified_page
 
@@ -45,6 +44,60 @@ def get_threads(d):
     """
 
     return d('li[id^="thread-"]:not(.sticky)')
+
+class ThreadDataExtractor(object):
+    """
+    Extracts thread data to be stored as MongoDB document
+
+    Attributes
+    ----------
+        thread: lxml.html.HtmlElement
+            contains a for sale thread link
+
+        data: dictionary
+            contains thread data
+
+    Methods
+    -------
+        extract_data
+            populates fields of data attribute
+    """
+
+    def __init__(self, thread):
+        self.thread = thread
+        self._d = self._parse_thread()
+        self.data = {}
+
+    def _parse_thread(self):
+        return pq(self.thread)
+
+    def extract_data(self):
+        self.data['_id'] = self._extract_thread_id()
+        self.data['username'] = self._extract_username()
+        self.data['thread_title'] = self._extract_thread_title()
+        self.data['image_url'] = self._extract_image_url()
+        self.data['post_date'] = self._extract_post_date()
+
+    def _extract_thread_id(self):
+        return self._d('li').attr['id'][len('thread-'):]
+
+    def _extract_username(self):
+        return self._d('li').attr['data-author']
+
+    def _extract_thread_title(self):
+        return self._d('.PreviewTooltip').text()
+
+    def _extract_image_url(self):
+        return self._d('.thumb.Av1s.Thumbnail').attr['data-thumbnailurl']
+
+    def _extract_post_date(self):
+        post_date = self._d('span.DateTime').text()
+        # if thread has been posted within the last week, date is contained
+        # elsewhere
+        if post_date == '':
+            post_date = self._d('abbr.DateTime').attr['data-datestring']
+
+        return post_date
 
 def extract_thread_data(thread_list):
     """
@@ -58,22 +111,9 @@ def extract_thread_data(thread_list):
     document_list = []
 
     for thread in thread_list:
-        #parse thread using PyQuery
-        d = pq(thread)
-
-        thread_id = d('li').attr['id'][len('thread-'):]
-        username = d('li').attr['data-author']
-        thread_title = d('.PreviewTooltip').text()
-        image_url = d('.thumb.Av1s.Thumbnail').attr['data-thumbnailurl']
-        post_date = d('span.DateTime').text()
-        #if thread has been posted within the last week, date is contained
-        #elsewhere
-        if post_date == '':
-            post_date = d('abbr.DateTime').attr['data-datestring']
-
-        document_list.append({'_id': thread_id, 'username': username,
-                              'thread_title': thread_title,
-                              'image_url': image_url, 'post_date': post_date})
+        extractor = ThreadDataExtractor(thread)
+        extractor.extract_data()
+        document_list.append(extractor.data)
 
     return document_list
 
