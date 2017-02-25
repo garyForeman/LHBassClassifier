@@ -24,6 +24,7 @@ REPORT_MESSAGE = 'Finished scraping page'
 INDEX_TALKBASS = 'http://www.talkbass.com/'
 CLASSIFIEDS = "forums/for-sale-bass-guitars.126/"
 
+
 def get_page_url(i):
     """
     i : integer page number of classified section
@@ -36,6 +37,7 @@ def get_page_url(i):
 
     return tb_classified_page
 
+
 def get_threads(d):
     """
     d : a PyQuery object containing web page html
@@ -44,6 +46,7 @@ def get_threads(d):
     """
 
     return d('li[id^="thread-"]:not(.sticky)')
+
 
 class ThreadDataExtractor(object):
     """
@@ -99,6 +102,7 @@ class ThreadDataExtractor(object):
 
         return post_date
 
+
 def extract_thread_data(thread_list):
     """
     thread_list: list of lxml.html.HtmlElement containing each for sale thread
@@ -117,23 +121,24 @@ def extract_thread_data(thread_list):
 
     return document_list
 
+
 def main():
-    #Establish connection to MongoDB open on port 27017
+    # Establish connection to MongoDB open on port 27017
     client = pymongo.MongoClient()
 
-    #Access threads database
+    # Access threads database
     db = client.for_sale_bass_guitars
 
     for i in xrange(1, NUM_PAGES+1):
         tb_classified_page = get_page_url(i)
 
-        #initialize PyQuery
+        # initialize PyQuery
         d = pq(tb_classified_page)
 
         thread_list = get_threads(d)
         document_list = extract_thread_data(thread_list)
         try:
-            result = db.threads.insert_many(document_list, ordered=False)
+            _ = db.threads.insert_many(document_list, ordered=False)
         except pymongo.errors.BulkWriteError:
             # Will throw error if _id has already been used. Just want
             # to skip these threads since data has already been written.

@@ -24,6 +24,7 @@ REPORT_MESSAGE = 'Scraped image'
 REPORT_FREQUENCY = 300
 DATA_PATH = os.path.join('..', 'data', 'images')
 
+
 def make_data_dir():
     """
     Checks to see whether DATA_PATH exists. If not, creates it.
@@ -31,6 +32,7 @@ def make_data_dir():
 
     if not os.path.isdir(DATA_PATH):
         os.makedirs(DATA_PATH)
+
 
 def filename_from_url(thumbnail_url):
     """
@@ -43,6 +45,7 @@ def filename_from_url(thumbnail_url):
     basename, ext = os.path.splitext(filename)
     return os.path.join(DATA_PATH, basename + '.jpg')
 
+
 def download_thumb(thumbnail_url):
     """
     thumbnail_url : a string with a url to a bass image
@@ -54,11 +57,12 @@ def download_thumb(thumbnail_url):
     try:
         urllib.urlretrieve(thumbnail_url, filename)
     except IOError:
-        #URL is not an image file
+        # URL is not an image file
         pass
     except UnicodeError:
-        #URL contains non-ASCII characters
+        # URL contains non-ASCII characters
         pass
+
 
 def crop_image(filename):
     """
@@ -71,29 +75,30 @@ def crop_image(filename):
         img = ImageOps.fit(img, (128, 128), Image.ANTIALIAS)
         img.save(filename)
     except NameError:
-        #File does not exist
+        # File does not exist
         pass
     except IOError:
-        #Image is corrupted
+        # Image is corrupted
         try:
             os.remove(filename)
         except OSError:
-            #Filename is too long
+            # Filename is too long
             pass
+
 
 def main():
     make_data_dir()
 
-    #Establish connection to MongoDB open on port 27017
+    # Establish connection to MongoDB open on port 27017
     client = pymongo.MongoClient()
 
-    #Access threads database
+    # Access threads database
     db = client.for_sale_bass_guitars
 
-    #Get database documents
+    # Get database documents
     cursor = db.threads.find()
 
-    #Get list of images that have already been scraped
+    # Get list of images that have already been scraped
     scraped_image_list = glob(os.path.join(DATA_PATH, '*.jpg'))
 
     thumbnail_url_list = []
@@ -104,7 +109,7 @@ def main():
             if filename not in scraped_image_list:
                 thumbnail_url_list.append(thumbnail_url)
         except AttributeError:
-            #thread has no associated thumbnail
+            # thread has no associated thumbnail
             pass
 
     client.close()
